@@ -4,11 +4,9 @@ import json
 
 app = Flask(__name__)
 
-
 @app.route("/")
 def index():
     return render_template("index.html")
-
 
 @app.route("/generate", methods=["POST"])
 def generate():
@@ -17,20 +15,18 @@ def generate():
     init_lon = float(data["init_lon"])
     init_bearing = float(data["init_bearing"])
     poi_altitude = float(data.get("poi_altitude", 1))
-    waypoints = [
-        {
-            "horizontal": float(wp["horizontal"]),
-            "vertical": float(wp["vertical"]),
-            "bearing": float(wp["bearing"]),
-            "hold_time": float(wp["hold_time"]),
-        }
-        for wp in data["waypoints"]
-    ]
+    waypoints = data["waypoints"]
 
     results = generate_waypoints(init_lat, init_lon, init_bearing, waypoints)
     filename = export_to_litchi_csv(init_lat, init_lon, results, poi_altitude)
     return send_file(filename, as_attachment=True, download_name=filename)
 
+# ✅ remove this line if it exists:
+# app.run()
 
-# Vercel looks for this entry point
-app.run()
+# ✅ instead, expose the Flask app directly:
+def handler(request, response):
+    return app(request, response)
+
+# ✅ or simply:
+# app = app  # so Vercel detects it as entry point
