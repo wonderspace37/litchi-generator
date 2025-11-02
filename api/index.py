@@ -6,7 +6,8 @@ from flask import Flask, request, send_file, render_template
 from waypoint_logic import generate_waypoints, export_to_litchi_csv
 import json
 
-app = Flask(__name__)
+# --- Flask app instance ---
+app = Flask(__name__, template_folder="templates")
 
 
 @app.route("/")
@@ -25,16 +26,10 @@ def generate():
 
     results = generate_waypoints(init_lat, init_lon, init_bearing, waypoints)
     filename = export_to_litchi_csv(init_lat, init_lon, results, poi_altitude)
+
     return send_file(filename, as_attachment=True, download_name=filename)
 
 
-# ✅ remove this line if it exists:
-# app.run()
-
-# ✅ instead, expose the Flask app directly:
-def handler(request, response):
-    return app(request, response)
-
-
-# ✅ or simply:
-# app = app  # so Vercel detects it as entry point
+# ❌ DO NOT include app.run()
+# ✅ DO NOT define a handler() function
+# ✅ Vercel automatically uses 'app' as the entry point
