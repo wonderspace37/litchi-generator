@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Litchi Waypoint Generator</title>
+  <style>
+    body {
+      font-family: Inter, sans-serif;
+      background: #0e1117;
+      color: #eee;
+      text-align: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: #1b1f27;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 0 15px #0005;
+    }
+    input, button {
+      margin: 6px;
+      padding: 8px;
+      border-radius: 8px;
+      border: none;
+    }
+    button { background: #3b82f6; color: white; cursor: pointer; }
+    table { margin: 10px auto; color: white; border-collapse: collapse; }
+    th, td { padding: 5px 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛰️ Litchi Waypoint Generator</h1>
+    <input id="lat" placeholder="Initial Latitude">
+    <input id="lon" placeholder="Initial Longitude">
+    <input id="bearing" placeholder="Initial Bearing">
+    <input id="poi" placeholder="POI Altitude (m)" value="1">
+
+    <table id="wpTable">
+      <tr><th>Horizontal (m)</th><th>Vertical (m)</th><th>Bearing (°)</th><th>Hold (s)</th><th></th></tr>
+    </table>
+    <button id="addWP">+ Add Waypoint</button>
+    <br><br>
+    <button id="generate">Generate CSV</button>
+    <p id="status"></p>
+  </div>
+
+<script>
+document.getElementById("addWP").onclick = () => {
+  const row = document.createElement("tr");
+  row.innerHTML = `<td><input></td><td><input></td><td><input></td><td><input></td>
+                   <td><button onclick="this.parentNode.parentNode.remove()">✖</button></td>`;
+  document.getElementById("wpTable").appendChild(row);
+};
+
+document.getElementById("generate").onclick = async () => {
+  const lat = parseFloat(document.getElementById("lat").value);
+  const lon = parseFloat(document.getElementById("lon").value);
+  const bearing = parseFloat(document.getElementById("bearing").value);
+  const poi = parseFloat(document.getElementById("poi").value);
+  const rows = [...document.querySelectorAll("#wpTable tr")].slice(1);
+  const waypoints = rows.map(r => {
+    const c = r.querySelectorAll("input");
+    return {horizontal:c[0].value,vertical:c[1].value,bearing:c[2].value,hold_time:c[3].value};
+  });
+
+  const res = await fetch("/generate", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      init_lat: lat, init_lon: lon, init_bearing: bearing,
+      poi_altitude: poi, waypoints
+    })
+  });
+
+  if (res.ok) {
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "output.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    document.getElementById("status").textContent = "✅ CSV generated!";
+  } else {
+    document.getElementById("status").textContent = "❌ Error generating CSV.";
+  }
+};
+</script>
+</body>
+</html>
