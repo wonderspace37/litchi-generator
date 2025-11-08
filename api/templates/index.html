@@ -54,6 +54,45 @@
   </div>
 
 <script>
+  // ---------- GENERATE CSV ----------
+document.getElementById('generate').onclick = async () => {
+  // 👇 ADD YOUR PAYLOAD CREATION HERE
+  const payload = {
+    init_lat: parseFloat(document.getElementById("lat").value),
+    init_lon: parseFloat(document.getElementById("lon").value),
+    init_bearing: parseFloat(document.getElementById("bearing").value),
+    speed_start: parseFloat(document.getElementById("speed").value),
+    curve_size: parseFloat(document.getElementById("curve").value),
+    gimbal_pitch: parseFloat(document.getElementById("pitch").value),
+    photo_interval: parseFloat(document.getElementById("photoInterval").value),
+    poi_altitude: parseFloat(document.getElementById("poi").value),
+    waypoints: collectedWaypoints   // or whatever array your map UI builds
+  };
+
+  try {
+    document.getElementById('status').textContent = '⏳ Generating...';
+    const res = await fetch('/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Server returned ' + res.status);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'litchi_waypoints.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    document.getElementById('status').textContent = '✅ CSV generated successfully.';
+  } catch (err) {
+    document.getElementById('status').textContent = '❌ Error generating CSV: ' + err.message;
+    console.error(err);
+  }
+};
+
 document.getElementById("addWP").onclick = () => {
   const row = document.createElement("tr");
   row.innerHTML = `<td><input></td><td><input></td><td><input></td><td><input></td>

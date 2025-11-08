@@ -1,25 +1,3 @@
-import sys, os
-import json
-from flask import Flask, request, send_file, render_template
-from waypoint_logic import generate_waypoints, export_to_litchi_csv
-
-# --- Ensure imports work when deployed ---
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-
-# --- Flask app instance ---
-app = Flask(__name__, template_folder="templates")
-
-# -------------------------------
-# --- ROUTES ---
-# -------------------------------
-
-
-@app.route("/")
-def index():
-    """Render the main web interface."""
-    return render_template("index.html")
-
-
 @app.route("/generate", methods=["POST"])
 def generate():
     """Handle JSON input from frontend and return generated CSV."""
@@ -28,14 +6,20 @@ def generate():
         init_lat = float(data["init_lat"])
         init_lon = float(data["init_lon"])
         init_bearing = float(data["init_bearing"])
-        poi_altitude = float(data.get("poi_altitude", 1))
+
+        # --- new user parameters ---
+        speed_start = float(data.get("speed_start", 0))  # m/s
+        curve_size = float(data.get("curve_size", 0))  # m
+        gimbal_pitch = float(data.get("gimbal_pitch", 0))  # °
+        poi_altitude = float(data.get("poi_altitude", 1))  # m
+        photo_interval = float(data.get("photo_interval", 1))  # s
+
         waypoints = data.get("waypoints", [])
 
-        # --- Normalize waypoint structure ---
+        # --- normalize waypoints as before ---
         parsed_waypoints = []
         for wp in waypoints:
             if isinstance(wp, dict):
-                # Handle both lowercase and UI-style keys
                 parsed_waypoints.append(
                     {
                         "horizontal": float(
@@ -62,18 +46,21 @@ def generate():
                     }
                 )
 
-        # --- Generate coordinates and export CSV ---
+        # --- pass new params to export function ---
         results = generate_waypoints(init_lat, init_lon, init_bearing, parsed_waypoints)
-        filename = export_to_litchi_csv(init_lat, init_lon, results, poi_altitude)
+        filename = export_to_litchi_csv(
+            init_lat,
+            init_lon,
+            results,
+            poi_altitude=poi_altitude,
+            speed_start=speed_start,
+            curve_size=curve_size,
+            gimbal_pitch=gimbal_pitch,
+            photo_interval=photo_interval,
+        )
 
         return send_file(filename, as_attachment=True, download_name=filename)
 
     except Exception as e:
-        # Log and return JSON error for frontend display
         print(f"❌ Error generating CSV: {e}")
         return {"error": str(e)}, 500
-
-
-# ✅ Do NOT call app.run()
-# ✅ Do NOT define a handler() function
-# Vercel automatically uses 'app' as the entry point
